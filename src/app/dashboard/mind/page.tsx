@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Brain, Sparkles, TrendingUp, Flame, Award, Focus, CheckCircle2, BarChart3, Shield, Moon } from "lucide-react"
+import { Brain, Sparkles, TrendingUp, Flame, Award, CheckCircle2, BarChart3 } from "lucide-react"
 import { useAI } from "@/hooks/useAI"
 import { useHabits } from "@/hooks/useHabits"
 
@@ -78,8 +78,10 @@ ${habitsText}
             {title:"💪 نقاط القوة",items:analysis.strengths,color:"#10b981"},
             {title:"⚠️ نقاط الضعف",items:analysis.weaknesses,color:"#ef4444"},
           ].map((sec,i)=>(
-            <div key={i} style={{background:"#0f1623",border:`1px solid ${sec.color}22`,
-              borderRadius:18,padding:"16px 18px",background2:`${sec.color}04`}}>
+            <div key={i} style={{
+              background: sec.color === "#10b981" ? "rgba(16,185,129,0.04)" : "rgba(239,68,68,0.04)",
+              border:`1px solid ${sec.color}22`,
+              borderRadius:18,padding:"16px 18px"}}>
               <div style={{color:sec.color,fontWeight:600,fontSize:13.5,marginBottom:12}}>{sec.title}</div>
               {sec.items?.map((item:string,j:number)=>(
                 <div key={j} style={{display:"flex",alignItems:"flex-start",gap:7,marginBottom:8,
