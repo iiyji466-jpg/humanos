@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id               String    @id @default(cuid())
+  name             String?
+  email            String?   @unique
+  emailVerified    DateTime?
+  image            String?
+  createdAt        DateTime  @default(now())
+  gender           String?
+  ageGroup         String?
+  persona          String    @default("calm")
+  goals            String[]
+  onboarded        Boolean   @default(false)
+  plan             String    @default("free")
+  stripeCustomerId String?
+  stripeSubId      String?
+  accounts         Account[]
+  sessions         Session[]
+  habits           Habit[]
+  focusSessions    FocusSession[]
+  aiConversations  AIConversation[]
+  memories         Memory[]
+  moodLogs         MoodLog[]
+  achievements     UserAchievement[]
+  learningPaths    LearningPath[]
+  audiobookProgress AudiobookProgress[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model Habit {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  emoji      String    @default("star")
+  color      String    @default("#6366f1")
+  time       String?
+  type       String    @default("build")
+  trigger    String?
+  category   String?
+  streak     Int       @default(0)
+  bestStreak Int       @default(0)
+  rate       Int       @default(0)
+  doneToday  Boolean   @default(false)
+  lastDone   DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs       HabitLog[]
+}
+
+model HabitLog {
+  id      String   @id @default(cuid())
+  habitId String
+  done    Boolean
+  date    DateTime @default(now())
+  mood    String?
+  habit   Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+}
+
+model FocusSession {
+  id        String   @id @default(cuid())
+  userId    String
+  duration  Int
+  mode      String
+  completed Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  messages  Json
+  context   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Memory {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  type      String   @default("insight")
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MoodLog {
+  id        String   @id @default(cuid())
+  userId    String
+  mood      String
+  note      String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LearningPath {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  progress  Int      @default(0)
+  lessons   Int      @default(0)
+  color     String?
+  emoji     String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AudiobookProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  progress  Int      @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
