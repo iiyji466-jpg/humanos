@@ -91,10 +91,11 @@ export default function AchievePage() {
           <motion.div key={a.id} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}}
             transition={{delay:i*0.05}}
             whileHover={{y:-3,boxShadow:"0 20px 60px rgba(0,0,0,0.5)"}}
-            style={{background:"#0f1623",
+            style={{
+              background: a.unlocked ? `${a.color}06` : "#0f1623",
               border:`1px solid ${a.unlocked?a.color+"30":"rgba(255,255,255,0.06)"}`,
               borderRadius:20,padding:"22px 18px",textAlign:"center",position:"relative",
-              background2:a.unlocked?`${a.color}06`:"#0f1623",transition:"all 0.25s"}}>
+              transition:"all 0.25s"}}>
             {a.unlocked&&(
               <div style={{position:"absolute",top:10,left:10}}>
                 <Check size={15} color={a.color} strokeWidth={2.5}/>
