@@ -1,34 +1,38 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { NextAuthOptions } from "next-auth"
+import GoogleProvider from "next-auth/providers/google"
+import { PrismaAdapter } from "@auth/prisma-adapter"
+import { prisma } from "./prisma"
 
-export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+// تعريف النوع لإضافة id إلى session.user
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      name?: string | null
+      email?: string | null
+      image?: string | null
+    }
   }
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const sessions = await prisma.focusSession.findMany({
-    where: { userId: session.user.id, createdAt: { gte: today } },
-  })
-
-  return NextResponse.json(sessions)
 }
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const body = await req.json()
-  const fs = await prisma.focusSession.create({
-    data: { ...body, userId: session.user.id },
-  })
-
-  return NextResponse.json(fs)
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma) as any,
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+  ],
+  session: { strategy: "jwt" },
+  pages: { signIn: "/auth", newUser: "/onboarding" },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) token.id = user.id
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) session.user.id = token.id as string
+      return session
+    },
+  },
 }
