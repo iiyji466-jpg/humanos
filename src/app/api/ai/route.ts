@@ -14,41 +14,51 @@ const PERSONAS: Record<string, string> = {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!(session?.user as any)?.id)return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-  const { messages, system, context } = await req.json()
+    const userId = (session.user as { id?: string }).id
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    include: { memories: { take: 5, orderBy: { pinned: "desc" } }, habits: true }
-  })
+    const { messages, system } = await req.json()
 
-  const personaText = PERSONAS[user?.persona || "calm"]
-  const memoriesText = user?.memories.map(m => m.content).join(" | ") || ""
-  const habitsText = user?.habits.map(h => `${h.name}(${h.streak}ي،${h.rate}٪)`).join(", ") || ""
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        memories: { take: 5, orderBy: { pinned: "desc" } },
+        habits: true,
+      },
+    })
 
-  const systemPrompt = `${personaText}
-أنت المدرب الذكي في منصة HumanOS — نظام تطوير الذات.
-المستخدم: ${user?.name || "صديقي"}.
+    const personaText = PERSONAS[user?.persona ?? "calm"]
+    const memoriesText = user?.memories.map(m => m.content).join(" | ") ?? ""
+    const habitsText = user?.habits.map(h => `${h.name}(${h.streak}ي،${h.rate}٪)`).join(", ") ?? ""
+
+    const systemPrompt = `${personaText}
+أنت المدرب الذكي في منصة HumanOS — نظام تطوير الذات المدعوم بالذكاء الاصطناعي.
+المستخدم: ${user?.name ?? "صديقي"}.
 ذاكرة مهمة: ${memoriesText}
 عاداته: ${habitsText}
-${system || ""}
+${system ?? ""}
 قواعد: أجب بالعربية. كن مختصراً (3-5 جمل). نصائح عملية قابلة للتطبيق فوراً.`
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages,
-  })
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages,
+    })
 
-  // Save conversation
-  await prisma.aIConversation.upsert({
-    where: { id: context || "new" },
-    create: { userId: session.user.id, messages, updatedAt: new Date() },
-    update: { messages, updatedAt: new Date() },
-  }).catch(() => {})
+    const text = response.content[0].type === "text" ? response.content[0].text : ""
+    return NextResponse.json({ text })
 
-  return NextResponse.json({ text: response.content[0].type === "text" ? response.content[0].text : "" })
+  } catch (error) {
+    console.error("AI route error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
 }
