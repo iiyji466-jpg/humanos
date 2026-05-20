@@ -4,7 +4,7 @@
 
 ## 🚀 النشر على Vercel (خطوات كاملة),
 
-### ١. إعداد Supabase (قاعدة البيانات)
+### ١. إعداد Supabase (قاعدة البيانات).
 1. اذهب إلى [supabase.com](https://supabase.com) وأنشئ مشروعاً مجانياً
 2. من **Settings → Database** انسخ **Connection String**
 3. ضعه في `DATABASE_URL` في متغيرات Vercel
