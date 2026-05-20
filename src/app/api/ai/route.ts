@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import Anthropic from "@anthropic-ai/sdk"
+import Groq from "groq-sdk"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! })
 
 const PERSONAS: Record<string, string> = {
   calm:     "أنت مدرب حياة هادئ ودافئ وصبور. لغتك لطيفة ومشجعة دائماً.",
@@ -15,22 +15,18 @@ const PERSONAS: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. التحقق من الجلسة
     const session = await getServerSession(authOptions)
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // 2. استخراج userId بأمان
     const userId = (session.user as { id?: string }).id
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // 3. قراءة body الطلب
     const { messages, system } = await req.json()
 
-    // 4. جلب بيانات المستخدم من قاعدة البيانات
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -39,7 +35,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 5. بناء system prompt
     const personaText = PERSONAS[user?.persona ?? "calm"]
     const memoriesText = user?.memories.map((m) => m.content).join(" | ") ?? ""
     const habitsText =
@@ -53,17 +48,16 @@ export async function POST(req: NextRequest) {
 ${system ?? ""}
 قواعد: أجب بالعربية. كن مختصراً (3-5 جمل). نصائح عملية قابلة للتطبيق فوراً.`
 
-    // 6. استدعاء Claude API
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
       max_tokens: 1024,
-      system: systemPrompt,
-      messages,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...messages,
+      ],
     })
 
-    // 7. استخراج النص من الرد
-    const text =
-      response.content[0].type === "text" ? response.content[0].text : ""
+    const text = response.choices[0].message.content ?? ""
 
     return NextResponse.json({ text })
 
