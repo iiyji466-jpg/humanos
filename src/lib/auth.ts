@@ -3,7 +3,6 @@ import GoogleProvider from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "./prisma"
 
-// تعريف النوع لإضافة id إلى session.user
 declare module "next-auth" {
   interface Session {
     user: {
@@ -33,6 +32,11 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) session.user.id = token.id as string
       return session
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith(baseUrl)) return url
+      if (url.startsWith("/")) return baseUrl + url
+      return baseUrl + "/dashboard"
     },
   },
 }
