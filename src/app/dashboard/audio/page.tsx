@@ -1,5 +1,6 @@
+cat > ~/humanos/src/app/dashboard/audio/page.tsx << 'EOF'
 "use client"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Headphones, Play, Pause, BookOpen, Bot, Sparkles, X, Clock } from "lucide-react"
 import { useAI } from "@/hooks/useAI"
@@ -26,11 +27,34 @@ export default function AudioPage() {
   const [readBook, setReadBook] = useState<typeof BOOKS[0]|null>(null)
   const [readContent, setReadContent] = useState("")
   const [readLoading, setReadLoading] = useState(false)
+  const synthRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const filtered = filter === "الكل" ? BOOKS : BOOKS.filter(b => b.cat === filter)
 
+  const togglePlay = (b: typeof BOOKS[0]) => {
+    const synth = window.speechSynthesis
+    if (playing === b.id) {
+      synth.cancel()
+      setPlaying(null)
+      return
+    }
+    synth.cancel()
+    const text = `كتاب ${b.title}، تأليف ${b.author}. هذا الكتاب في مجال ${b.cat}. ${
+      b.prog > 0 ? `لقد أكملت ${b.prog} بالمئة من هذا الكتاب.` : "لم تبدأ هذا الكتاب بعد."
+    }`
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = "ar-SA"
+    u.rate = 0.85
+    u.pitch = 1
+    u.onend = () => setPlaying(null)
+    u.onerror = () => setPlaying(null)
+    synthRef.current = u
+    synth.speak(u)
+    setPlaying(b.id)
+  }
+
   const getRecommendation = async () => {
-    const r = await ask([{ role:"user", content:`بناءً على عاداتي (${habits.map(h=>h.name).join(", ")||"عامة"})، أوصني بكتاب واحد من: ${BOOKS.map(b=>b.title).join(", ")}. قل لماذا هذا الكتاب مناسب لي الآن (جملتان فقط). ابدأ باسم الكتاب.` }])
+    const r = await ask([{ role:"user", content:`بناءً على عاداتي (${habits.map((h:any)=>h.name).join(", ")||"عامة"})، أوصني بكتاب واحد من: ${BOOKS.map(b=>b.title).join(", ")}. قل لماذا هذا الكتاب مناسب لي الآن (جملتان فقط). ابدأ باسم الكتاب.` }])
     if (r) setRec(r)
   }
 
@@ -43,7 +67,6 @@ export default function AudioPage() {
 
   return (
     <div style={{height:"100%",overflowY:"auto",display:"flex",flexDirection:"column",gap:18,paddingBottom:8}}>
-      {/* Read modal */}
       <AnimatePresence>
         {readBook && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
@@ -113,7 +136,6 @@ export default function AudioPage() {
         )}
       </AnimatePresence>
 
-      {/* Filters */}
       <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
         {CATS.map(c => (
           <button key={c} onClick={()=>setFilter(c)} style={{
@@ -125,7 +147,6 @@ export default function AudioPage() {
         ))}
       </div>
 
-      {/* Books grid */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
         {filtered.map((b,i) => (
           <motion.div key={b.id} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}}
@@ -174,7 +195,7 @@ export default function AudioPage() {
               </div>
             )}
             <div style={{display:"flex",gap:7}}>
-              <button onClick={()=>setPlaying(p=>p===b.id?null:b.id)} style={{
+              <button onClick={()=>togglePlay(b)} style={{
                 flex:1,padding:"10px",borderRadius:11,border:"none",cursor:"pointer",
                 background:`linear-gradient(135deg,${b.color},${b.color}bb)`,
                 color:"#fff",fontSize:13,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6,
@@ -193,3 +214,4 @@ export default function AudioPage() {
     </div>
   )
 }
+EOF
