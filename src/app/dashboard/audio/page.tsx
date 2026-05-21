@@ -1,8 +1,7 @@
-cat > ~/humanos/src/app/dashboard/audio/page.tsx << 'EOF'
 "use client"
 import { useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Headphones, Play, Pause, BookOpen, Bot, Sparkles, X, Clock } from "lucide-react"
+import { Headphones, Play, Pause, BookOpen, Bot, Sparkles, X, Clock, Volume2 } from "lucide-react"
 import { useAI } from "@/hooks/useAI"
 import { useHabits } from "@/hooks/useHabits"
 
@@ -27,9 +26,16 @@ export default function AudioPage() {
   const [readBook, setReadBook] = useState<typeof BOOKS[0]|null>(null)
   const [readContent, setReadContent] = useState("")
   const [readLoading, setReadLoading] = useState(false)
-  const synthRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const [unlocked, setUnlocked] = useState(false)
 
   const filtered = filter === "الكل" ? BOOKS : BOOKS.filter(b => b.cat === filter)
+
+  const unlock = () => {
+    const u = new SpeechSynthesisUtterance(" ")
+    u.volume = 0
+    window.speechSynthesis.speak(u)
+    setUnlocked(true)
+  }
 
   const togglePlay = (b: typeof BOOKS[0]) => {
     const synth = window.speechSynthesis
@@ -39,16 +45,12 @@ export default function AudioPage() {
       return
     }
     synth.cancel()
-    const text = `كتاب ${b.title}، تأليف ${b.author}. هذا الكتاب في مجال ${b.cat}. ${
-      b.prog > 0 ? `لقد أكملت ${b.prog} بالمئة من هذا الكتاب.` : "لم تبدأ هذا الكتاب بعد."
-    }`
+    const text = `كتاب ${b.title}، تأليف ${b.author}. هذا الكتاب في مجال ${b.cat}.`
     const u = new SpeechSynthesisUtterance(text)
     u.lang = "ar-SA"
     u.rate = 0.85
-    u.pitch = 1
     u.onend = () => setPlaying(null)
     u.onerror = () => setPlaying(null)
-    synthRef.current = u
     synth.speak(u)
     setPlaying(b.id)
   }
@@ -122,6 +124,20 @@ export default function AudioPage() {
             : <Sparkles size={15}/>} توصية AI
         </motion.button>
       </motion.div>
+
+      {!unlocked && (
+        <motion.div initial={{opacity:0}} animate={{opacity:1}}
+          style={{background:"rgba(16,185,129,0.05)",border:"1px solid rgba(16,185,129,0.2)",
+            borderRadius:16,padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{color:"#8b9cc8",fontSize:13}}>فعّل الصوت للاستماع للكتب</span>
+          <button onClick={unlock}
+            style={{padding:"8px 16px",borderRadius:10,border:"none",cursor:"pointer",
+              background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:13,
+              display:"flex",alignItems:"center",gap:6,fontFamily:"var(--font-arabic)"}}>
+            <Volume2 size={14}/> تفعيل الصوت
+          </button>
+        </motion.div>
+      )}
 
       <AnimatePresence>
         {rec && (
@@ -214,4 +230,3 @@ export default function AudioPage() {
     </div>
   )
 }
-EOF
